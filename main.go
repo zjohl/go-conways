@@ -17,8 +17,8 @@ import (
 const (
 	width  = 500
 	height = 500
-	rows = 100
-	columns = 100
+	rows = 50
+	columns = 50
 
 	fps = 10
 
@@ -39,17 +39,6 @@ const (
 	` + "\x00"
 )
 
-var (
-	square = []float32{
-		-0.5, 0.5, 0,
-		-0.5, -0.5, 0,
-		0.5, -0.5, 0,
-
-		-0.5, 0.5, 0,
-		0.5, 0.5, 0,
-		0.5, -0.5, 0,
-	}
-)
 
 func main() {
 	runtime.LockOSThread()
@@ -73,7 +62,7 @@ func main() {
 
 		for x := range cells {
 			for _, c := range cells[x] {
-				c.checkState(cells)
+				c.Update(cells)
 			}
 		}
 
@@ -133,7 +122,7 @@ func draw(cells [][]*Cell, window *glfw.Window, program uint32) {
 
 	for _, row := range cells {
 		for _, cell := range row {
-			cell.draw()
+			cell.Draw()
 		}
 	}
 
@@ -228,82 +217,4 @@ func newCell(x, y int) *Cell {
 		x: x,
 		y: y,
 	}
-}
-
-type Cell struct {
-	drawable uint32
-
-	alive     bool
-	aliveNext bool
-
-	x int
-	y int
-}
-
-func (c *Cell) draw() {
-	if !c.alive {
-		return
-	}
-
-	gl.BindVertexArray(c.drawable)
-	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(square)/3))
-}
-
-func (c *Cell) checkState(Cells [][]*Cell) {
-	c.alive = c.aliveNext
-	c.aliveNext = c.alive
-
-	liveCount := c.liveNeighbors(Cells)
-	if c.alive {
-		// Cells with fewer than two live neighbors dies
-		if liveCount < 2 {
-			c.aliveNext = false
-		}
-
-		// A live Cell with 2 or 3 live neighbors lives
-		if liveCount == 2 || liveCount == 3 {
-			c.aliveNext = true
-		}
-
-		// A live Cell with more than 3 neighbors dies
-		if liveCount > 3 {
-			c.aliveNext = false
-		}
-	} else {
-		if liveCount == 3 {
-			c.aliveNext = true
-		}
-	}
-}
-
-func (c *Cell) liveNeighbors(Cells [][]*Cell) int {
-	var liveCount int
-	add := func(x, y int) {
-		// If we're at an edge, check the other side of the board.
-		if x == len(Cells) {
-			x = 0
-		} else if x == -1 {
-			x = len(Cells) - 1
-		}
-		if y == len(Cells[x]) {
-			y = 0
-		} else if y == -1 {
-			y = len(Cells[x]) - 1
-		}
-
-		if Cells[x][y].alive {
-			liveCount++
-		}
-	}
-
-	add(c.x-1, c.y)   // To the left
-	add(c.x+1, c.y)   // To the right
-	add(c.x, c.y+1)   // up
-	add(c.x, c.y-1)   // down
-	add(c.x-1, c.y+1) // top-left
-	add(c.x+1, c.y+1) // top-right
-	add(c.x-1, c.y-1) // bottom-left
-	add(c.x+1, c.y-1) // bottom-right
-
-	return liveCount
 }
