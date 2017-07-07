@@ -10,13 +10,17 @@ import (
 
 	"github.com/go-gl/gl/v4.1-core/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
+	"math/rand"
+	"time"
 )
 
 const (
 	width  = 500
 	height = 500
-	rows = 10
-	columns = 10
+	rows = 100
+	columns = 100
+
+	fps = 10
 
 	vertexShaderSource = `
 		#version 410
@@ -47,18 +51,6 @@ var (
 	}
 )
 
-type Cell struct {
-	drawable uint32
-
-	x int
-	y int
-}
-
-func (c *Cell) draw() {
-	gl.BindVertexArray(c.drawable)
-	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(square) / 3))
-}
-
 func main() {
 	runtime.LockOSThread()
 
@@ -75,9 +67,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	Cells := makeCells()
+	cells := makeCells()
 	for !window.ShouldClose() {
-		draw(Cells, window, program)
+		t := time.Now()
+
+		for x := range cells {
+			for _, c := range cells[x] {
+				c.checkState(cells)
+			}
+		}
+
+		draw(cells, window, program)
+
+		time.Sleep(time.Second/time.Duration(fps) - time.Since(t))
 	}
 	return
 	os.Exit(0)
@@ -125,13 +127,13 @@ func initOpenGL() (uint32, error) {
 	return prog, nil
 }
 
-func draw(Cells [][]*Cell, window *glfw.Window, program uint32) {
+func draw(cells [][]*Cell, window *glfw.Window, program uint32) {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	gl.UseProgram(program)
 
-	for _, row := range Cells {
-		for _, Cell := range row {
-			Cell.draw()
+	for _, row := range cells {
+		for _, cell := range row {
+			cell.draw()
 		}
 	}
 
@@ -179,14 +181,21 @@ func compileShader(source string, shaderType uint32) (uint32, error) {
 }
 
 func makeCells() [][]*Cell {
-	Cells := make([][]*Cell, rows, rows)
+	threshold := .15
+	rand.Seed(time.Now().UnixNano())
+
+	cells := make([][]*Cell, rows, rows)
 	for x := 0; x < rows; x ++ {
 		for y := 0; y < columns; y++ {
-			c := newCell(x,y)
-			Cells[x] = append(Cells[x], c)
+			cell := newCell(x,y)
+
+			cell.alive = rand.Float64() < threshold
+			cell.aliveNext = cell.alive
+
+			cells[x] = append(cells[x], cell)
 		}
 	}
-	return Cells
+	return cells
 }
 
 func newCell(x, y int) *Cell {
@@ -219,4 +228,82 @@ func newCell(x, y int) *Cell {
 		x: x,
 		y: y,
 	}
+}
+
+type Cell struct {
+	drawable uint32
+
+	alive     bool
+	aliveNext bool
+
+	x int
+	y int
+}
+
+func (c *Cell) draw() {
+	if !c.alive {
+		return
+	}
+
+	gl.BindVertexArray(c.drawable)
+	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(square)/3))
+}
+
+func (c *Cell) checkState(Cells [][]*Cell) {
+	c.alive = c.aliveNext
+	c.aliveNext = c.alive
+
+	liveCount := c.liveNeighbors(Cells)
+	if c.alive {
+		// Cells with fewer than two live neighbors dies
+		if liveCount < 2 {
+			c.aliveNext = false
+		}
+
+		// A live Cell with 2 or 3 live neighbors lives
+		if liveCount == 2 || liveCount == 3 {
+			c.aliveNext = true
+		}
+
+		// A live Cell with more than 3 neighbors dies
+		if liveCount > 3 {
+			c.aliveNext = false
+		}
+	} else {
+		if liveCount == 3 {
+			c.aliveNext = true
+		}
+	}
+}
+
+func (c *Cell) liveNeighbors(Cells [][]*Cell) int {
+	var liveCount int
+	add := func(x, y int) {
+		// If we're at an edge, check the other side of the board.
+		if x == len(Cells) {
+			x = 0
+		} else if x == -1 {
+			x = len(Cells) - 1
+		}
+		if y == len(Cells[x]) {
+			y = 0
+		} else if y == -1 {
+			y = len(Cells[x]) - 1
+		}
+
+		if Cells[x][y].alive {
+			liveCount++
+		}
+	}
+
+	add(c.x-1, c.y)   // To the left
+	add(c.x+1, c.y)   // To the right
+	add(c.x, c.y+1)   // up
+	add(c.x, c.y-1)   // down
+	add(c.x-1, c.y+1) // top-left
+	add(c.x+1, c.y+1) // top-right
+	add(c.x-1, c.y-1) // bottom-left
+	add(c.x+1, c.y-1) // bottom-right
+
+	return liveCount
 }
