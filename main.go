@@ -15,14 +15,13 @@ import (
 )
 
 const (
-	width  = 500
-	height = 500
-	rows = 50
+	width   = 500
+	height  = 500
+	rows    = 50
 	columns = 50
 
 	fps = 10
 )
-
 
 func main() {
 	runtime.LockOSThread()
@@ -158,9 +157,9 @@ func makeCells() [][]*Cell {
 	rand.Seed(time.Now().UnixNano())
 
 	cells := make([][]*Cell, rows, rows)
-	for x := 0; x < rows; x ++ {
+	for x := 0; x < rows; x++ {
 		for y := 0; y < columns; y++ {
-			cell := newCell(x,y)
+			cell := newCell(x, y)
 
 			cell.alive = rand.Float64() < threshold
 			cell.aliveNext = cell.alive
@@ -172,33 +171,32 @@ func makeCells() [][]*Cell {
 }
 
 func newCell(x, y int) *Cell {
-	points := make([]float32, len(square), len(square))
-	copy(points, square)
-	for i := 0; i < len(points); i ++ {
-		var position float32
-		var size float32
-		switch i % 3 {
-		case 0:
-			size = 1.0 / float32(columns)
-			position = float32(x) * size
-		case 1:
-			size = 1.0 / float32(rows)
-			position = float32(y) * size
-		default:
-			continue
-		}
+	var points []float32
+	width := 1.0 / float32(columns)
+	height := 1.0 / float32(rows)
 
-		if points[i] < 0 {
-			points[i] = (position * 2) -1
-		} else {
-			points[i] = ((position + size) * 2) -1
-		}
+	for _, vertex := range square {
+		points = append(points, normalize(vertex.x, width, position(float32(x), width)))
+		points = append(points, normalize(vertex.y, height, position(float32(y), height)))
+		points = append(points, vertex.z)
 	}
 
-	return &Cell {
+	return &Cell{
 		drawable: makeVao(points),
 
 		x: x,
 		y: y,
+	}
+}
+
+func position(coord, size float32) float32 {
+	return coord * size
+}
+
+func normalize(coord, size, position float32) float32 {
+	if coord < 0 {
+		return (position * 2) - 1
+	} else {
+		return ((position + size) * 2) - 1
 	}
 }

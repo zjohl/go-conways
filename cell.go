@@ -12,16 +12,21 @@ type Cell struct {
 	y int
 }
 
+type vertex struct {
+	x float32
+	y float32
+	z float32
+}
 
 var (
-	square = []float32{
-		-0.5, 0.5, 0,
-		-0.5, -0.5, 0,
-		0.5, -0.5, 0,
+	square = []vertex{
+		{-0.5, 0.5, 0},
+		{-0.5, -0.5, 0},
+		{0.5, -0.5, 0},
 
-		-0.5, 0.5, 0,
-		0.5, 0.5, 0,
-		0.5, -0.5, 0,
+		{-0.5, 0.5, 0},
+		{0.5, 0.5, 0},
+		{0.5, -0.5, 0},
 	}
 )
 
@@ -31,7 +36,7 @@ func (c *Cell) Draw() {
 	}
 
 	gl.BindVertexArray(c.drawable)
-	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(square)/3))
+	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(square)))
 }
 
 func (c *Cell) Update(cells [][]*Cell) {
