@@ -8,25 +8,27 @@ import (
 	"os"
 	"strings"
 
-	"github.com/go-gl/gl/v4.1-core/gl"
-	"github.com/go-gl/glfw/v3.2/glfw"
 	"math/rand"
 	"time"
-)
 
-const (
-	width   = 500
-	height  = 500
-	rows    = 50
-	columns = 50
+	"flag"
 
-	fps = 10
+	"github.com/go-gl/gl/v4.1-core/gl"
+	"github.com/go-gl/glfw/v3.2/glfw"
 )
 
 func main() {
 	runtime.LockOSThread()
 
-	window, err := initGlfw()
+	width := flag.Int("w", 500, "")
+	height := flag.Int("h", 500, "")
+	rows := flag.Int("r", 50, "")
+	columns := flag.Int("c", 50, "")
+	fps := flag.Int("f", 10, "")
+
+	flag.Parse()
+
+	window, err := initGlfw(*width, *height)
 	if err != nil {
 		log.Fatalln(err)
 		os.Exit(1)
@@ -39,25 +41,34 @@ func main() {
 		os.Exit(1)
 	}
 
-	cells := makeCells()
+	cells := makeCells(*rows, *columns)
 	for !window.ShouldClose() {
 		t := time.Now()
+		var numCells, deadCells int
 
 		for x := range cells {
 			for _, c := range cells[x] {
 				c.Update(cells)
+				numCells++
+				if !c.alive {
+					deadCells++
+				}
 			}
+		}
+
+		if deadCells == numCells {
+			break
 		}
 
 		draw(cells, window, program)
 
-		time.Sleep(time.Second/time.Duration(fps) - time.Since(t))
+		time.Sleep(time.Second/time.Duration(*fps) - time.Since(t))
 	}
 	return
 	os.Exit(0)
 }
 
-func initGlfw() (*glfw.Window, error) {
+func initGlfw(width, height int) (*glfw.Window, error) {
 	if err := glfw.Init(); err != nil {
 		return nil, err
 	}
@@ -152,14 +163,14 @@ func compileShader(source string, shaderType uint32) (uint32, error) {
 	return shader, nil
 }
 
-func makeCells() [][]*Cell {
+func makeCells(rows, columns int) [][]*Cell {
 	threshold := .15
 	rand.Seed(time.Now().UnixNano())
 
 	cells := make([][]*Cell, rows, rows)
 	for x := 0; x < rows; x++ {
 		for y := 0; y < columns; y++ {
-			cell := newCell(x, y)
+			cell := newCell(x, y, rows, columns)
 
 			cell.alive = rand.Float64() < threshold
 			cell.aliveNext = cell.alive
@@ -170,7 +181,7 @@ func makeCells() [][]*Cell {
 	return cells
 }
 
-func newCell(x, y int) *Cell {
+func newCell(x, y, rows, columns int) *Cell {
 	var points []float32
 	width := 1.0 / float32(columns)
 	height := 1.0 / float32(rows)

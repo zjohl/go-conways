@@ -1,6 +1,5 @@
 package main
 
-
 func vertexShaderSource() string {
 	return `
 		#version 410
