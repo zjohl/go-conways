@@ -21,22 +21,6 @@ const (
 	columns = 50
 
 	fps = 10
-
-	vertexShaderSource = `
-		#version 410
-		in vec3 vp;
-		void main() {
-			gl_Position = vec4(vp, 1.0);
-		}
-	` + "\x00"
-
-	fragmentShaderSource = `
-		#version 410
-		out vec4 frag_colour;
-		void main() {
-			frag_colour = vec4(1, 1, 1, 1.0);
-		}
-	` + "\x00"
 )
 
 
@@ -100,11 +84,11 @@ func initOpenGL() (uint32, error) {
 	version := gl.GoStr(gl.GetString(gl.VERSION))
 	log.Println("OpenGL version", version)
 
-	vertexShader, err := compileShader(vertexShaderSource, gl.VERTEX_SHADER)
+	vertexShader, err := compileShader(vertexShaderSource(), gl.VERTEX_SHADER)
 	if err != nil {
 		return 0, err
 	}
-	fragmentShader, err := compileShader(fragmentShaderSource, gl.FRAGMENT_SHADER)
+	fragmentShader, err := compileShader(fragmentShaderSource(), gl.FRAGMENT_SHADER)
 	if err != nil {
 		return 0, err
 	}

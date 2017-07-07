@@ -7,8 +7,6 @@ type Cell struct {
 
 	alive     bool
 	aliveNext bool
-	
-	timeAlive int
 
 	x int
 	y int
@@ -38,11 +36,6 @@ func (c *Cell) Draw() {
 
 func (c *Cell) Update(cells [][]*Cell) {
 	c.checkState(cells)
-	if c.alive {
-		c.timeAlive = c.timeAlive + 1
-	} else {
-		c.timeAlive = 0
-	}
 }
 
 func (c *Cell) checkState(cells [][]*Cell) {
